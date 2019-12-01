@@ -71,6 +71,10 @@ class Viewport {
 		this.postMouseMoveListeners = {}
 		this.postMouseWheelListeners = {}
 
+		this.ctrlDown = false;
+		this.shiftDown = false;
+		this.altDown = false;
+
 		this.makeElements();
 		this.setupScrollLogic();
 		this.setupMouseListeners();
@@ -254,12 +258,15 @@ class Viewport {
 	}
 
 	forget(obj) {
+		obj.onForget();
 		this.unregisterDrawnObj(obj);
 		this.unregisterMouseListeningObj(obj);
 		this.unregisterMouseOverObj(obj);
 		this.unregisterHeldObj(obj);
 		this.unregisterDraggedObj(obj);
 		this.queueRedraw();
+		// update mouse logic in case an object is removed that was preventing a lower object from being touched
+		this.mousePosUpdated();
 	}
 
 	background() {
@@ -376,15 +383,23 @@ class Viewport {
 		const self = this;
 		document.addEventListener("keydown", function (e) {
 			switch (e.which) {
+				case 16:
+					self.shiftDown = true;
 				case 17:
 					self.ctrlDown = true;
-					
+				case 18:
+					self.altDown = true;
+
 			}
 		});
 		document.addEventListener("keyup", function (e) {
 			switch (e.which) {
+				case 16:
+					self.shiftDown = false;
 				case 17:
 					self.ctrlDown = false;
+				case 18:
+					self.altDown = false;
 			}
 
 		});
@@ -396,7 +411,7 @@ class Viewport {
 		const self = this;
 		this.container.addEventListener("wheel", function (e) {
 			self.preOnMouseWheel(e);
-			
+
 			if (e.ctrlKey) {
 				if (self.minZoomFactor < self.maxZoomFactor) {
 					const prevZoom = self.zoomFactor;
@@ -478,13 +493,13 @@ class Viewport {
 		});
 	}
 
-	suggestCursor(type) {
-		this.cursorSuggests[type] = (this.cursorSuggests[type] || 0) + 1
+	suggestCursor(type, count = 1) {
+		this.cursorSuggests[type] = (this.cursorSuggests[type] || 0) + count
 		this.refreshCursorType();
 	}
 
-	unsuggestCursor(type) {
-		this.cursorSuggests[type] = this.cursorSuggests[type] - 1
+	unsuggestCursor(type, count = 1) {
+		this.cursorSuggests[type] = Math.max(0, (this.cursorSuggests[type] || 0) - count);
 		this.refreshCursorType();
 	}
 

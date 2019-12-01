@@ -15,12 +15,29 @@ class VPObject {
         this.held = false;
         this.grabbed = false;
         this.size = 10;
+        this.suggestedCursors = {};
     }
 
-    static globalInit(){
-        
+    static globalInit() {
+
     }
 
+    suggestCursor(type) {
+        this.suggestedCursors[type] = (this.suggestedCursors[type] || 0) + 1
+        this.vp.suggestCursor(type);
+    }
+
+    unsuggestCursor(type) {
+        this.suggestedCursors[type] = this.suggestedCursors[type] - 1
+        this.vp.unsuggestCursor(type);
+    }
+
+    unsuggestAllCursors() {
+        for (const type in this.suggestedCursors) {
+            this.vp.unsuggestCursor(type, this.suggestedCursors[type]);
+        }
+        this.suggestedCursors = {};
+    }
     isMouseBlockingOverlap() {
         return false;
     }
@@ -87,7 +104,7 @@ class VPObject {
     /** 
      * Called when the mouse is released after having been pressed on the object, disregarding intermediate/final movements/position.
      * Called before both onDragEnded and onClicked
-    */
+     */
     onUnpressed() {
         // console.log("UP");
     }
@@ -102,8 +119,8 @@ class VPObject {
         // console.log("!! UP");
     }
 
-    onDragged(){
-        
+    onDragged() {
+
     }
 
     /** Called when the mouse is pressed on object and released, after moving a minimum distance */
@@ -114,5 +131,9 @@ class VPObject {
     /** Called when the mouse is pressed on object and released, after moving a limited distance */
     onClicked() {
         // console.log("CLICKED");
+    }
+
+    onForget() {
+        this.unsuggestAllCursors();
     }
 }

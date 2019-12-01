@@ -325,11 +325,12 @@ class Viewport {
 			this.mouseDragDistance += this.mouseDelta.length();
 			if (this.mouseDragDistance >= this.nonDragThreshold) {
 				for (const uuid of this.heldObjIdsSorted) {
+					const obj = this.allObjs[uuid];
 					if (!this.draggedObjIds.has(uuid)) {
-						const obj = this.allObjs[uuid];
 						this.registerDraggedObj(obj);
 						obj.onDragStarted(this);
 					}
+					obj.onDragged(this);
 				}
 			}
 		}

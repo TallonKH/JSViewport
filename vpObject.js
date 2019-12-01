@@ -101,6 +101,10 @@ class VPObject {
         // console.log("!! UP");
     }
 
+    onDragged(vp){
+        
+    }
+
     /** Called when the mouse is pressed on object and released, after moving a minimum distance */
     onDragEnded(vp) {
         // console.log("!! UP");

@@ -1,10 +1,11 @@
 var idCounter = 0;
 class VPObject {
-    constructor({
+    constructor(vp, {
         drawable = true,
         mouseListening = false,
         zOrder = 0
     } = {}) {
+        this.vp = vp;
         this.uuid = idCounter++;
         this.zOrder = zOrder;
         this.mouseListening = mouseListening;
@@ -16,15 +17,15 @@ class VPObject {
         this.size = 10;
     }
 
-    static globalInit(vp){
+    static globalInit(){
         
     }
 
-    isMouseBlockingOverlap(vp) {
+    isMouseBlockingOverlap() {
         return false;
     }
 
-    isMouseBlockingPress(vp) {
+    isMouseBlockingPress() {
         return false;
     }
 
@@ -32,54 +33,54 @@ class VPObject {
         return this.position.subtractp(point).lengthSquared() < Math.pow(this.size, 2);
     }
 
-    draw(vp, ctx) {
+    draw(ctx) {
         ctx.fillStyle = "black";
-        this.fillCircle(vp);
+        this.fillCircle();
     }
 
-    strokeLine(vp, ctx, posA, posB) {
-        posA = vp.canvasToViewSpace(posA);
-        posB = vp.canvasToViewSpace(posB);
+    strokeLine(ctx, posA, posB) {
+        posA = this.vp.canvasToViewSpace(posA);
+        posB = this.vp.canvasToViewSpace(posB);
         ctx.beginPath();
         ctx.moveTo(posA.x, posA.y);
         ctx.lineTo(posB.x, posB.y);
         ctx.stroke();
     }
 
-    fillCircle(vp, ctx) {
+    fillCircle(ctx) {
         const self = this;
-        const adPos = vp.canvasToViewSpace(self.position);
+        const adPos = self.vp.canvasToViewSpace(self.position);
         ctx.beginPath();
         ctx.ellipse(
             adPos.x, adPos.y,
-            self.size * vp.zoomFactor, self.size * vp.zoomFactor,
+            self.size * self.vp.zoomFactor, self.size * self.vp.zoomFactor,
             0,
             0, 2 * Math.PI);
         ctx.fill();
     }
 
-    strokeCircle(vp, ctx, scale = 1) {
+    strokeCircle(ctx, scale = 1) {
         const self = this;
-        const adPos = vp.canvasToViewSpace(self.position);
+        const adPos = this.vp.canvasToViewSpace(self.position);
         ctx.beginPath();
         ctx.ellipse(
             adPos.x, adPos.y,
-            self.size * vp.zoomFactor * scale, self.size * vp.zoomFactor * scale,
+            self.size * this.vp.zoomFactor * scale, self.size * this.vp.zoomFactor * scale,
             0,
             0, 2 * Math.PI);
         ctx.stroke();
     }
 
-    onMouseEntered(vp) {
+    onMouseEntered() {
         // console.log("ENTER");
     }
 
-    onMouseExited(vp) {
+    onMouseExited() {
         // console.log("EXIT");
     }
 
     /** Called when the mouse is pressed over an object */
-    onPressed(vp) {
+    onPressed() {
         // console.log("DOWN");
     }
 
@@ -87,31 +88,31 @@ class VPObject {
      * Called when the mouse is released after having been pressed on the object, disregarding intermediate/final movements/position.
      * Called before both onDragEnded and onClicked
     */
-    onUnpressed(vp) {
+    onUnpressed() {
         // console.log("UP");
     }
 
     /** Called when the mouse is released over an object, regardless of whether it was pressed on the object */
-    onMouseUp(vp) {
+    onMouseUp() {
         // console.log("UP");
     }
 
     /** Called when the mouse is pressed on object and moved a minimum distance */
-    onDragStarted(vp) {
+    onDragStarted() {
         // console.log("!! UP");
     }
 
-    onDragged(vp){
+    onDragged(){
         
     }
 
     /** Called when the mouse is pressed on object and released, after moving a minimum distance */
-    onDragEnded(vp) {
+    onDragEnded() {
         // console.log("!! UP");
     }
 
     /** Called when the mouse is pressed on object and released, after moving a limited distance */
-    onClicked(vp) {
+    onClicked() {
         // console.log("CLICKED");
     }
 }

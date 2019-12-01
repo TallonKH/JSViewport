@@ -72,11 +72,11 @@ class NPoint {
 		return Math.sqrt(this.lengthSquared());
 	}
 
-	min(){
+	min() {
 		return Math.min(this.x, this.y);
 	}
 
-	max(){
+	max() {
 		return Math.max(this.x, this.y);
 	}
 
@@ -93,18 +93,31 @@ class NPoint {
 		return new NPoint(this.x, this.y);
 	}
 
-	rotate(rads){
+	rotate(rads) {
 		const prevRads = this.getAngle();
 		const mag = this.length();
 		return new NPoint(Math.cos(rads + prevRads) * mag, Math.sin(rads + prevRads) * mag);
 	}
 
-	getAngle(){
+	getAngle() {
 		return Math.atan2(this.y, this.x);
 	}
-	
-	rotateAxis(rads, axis){
+
+	rotateAxis(rads, axis) {
 		return this.subtractp(axis).rotate(rads).addp(axis);
+	}
+
+	distToSegmentSquared(v, w) {
+		const l2 = v.subtractp(w).lengthSquared();
+		if (l2 == 0) {
+			return this.subtractp(v).lengthSquared();
+		}
+		const t = clamp(NPoint.dotProduct(v.subtractp(this), v.subtractp(w)) / l2, 0, 1);
+		return this.subtractp(w.subtractp(v).multiply1(t).addp(v)).lengthSquared();
+	}
+
+	distToSegment(v, w) {
+		return Math.sqrt(this.distToSegmentSquared(v, w));
 	}
 
 	static same(...pts) {
@@ -125,6 +138,10 @@ class NPoint {
 
 	static max(...pts) {
 		return new NPoint(Math.max(...pts.map(pt => pt.x)), Math.max(...pts.map(pt => pt.y)));
+	}
+
+	static dotProduct(a, b) {
+		return a.x * b.x + a.y * b.y;
 	}
 
 	static crossProduct(a, b) {

@@ -280,7 +280,7 @@ class Viewport {
 		this.background();
 		for (const uuid of this.drawnObjIdsSorted) {
 			const obj = this.allObjs[uuid];
-			obj.draw(this, this.ctx);
+			obj.draw(this.ctx);
 		}
 	}
 
@@ -329,9 +329,9 @@ class Viewport {
 					const obj = this.allObjs[uuid];
 					if (!this.draggedObjIds.has(uuid)) {
 						this.registerDraggedObj(obj);
-						obj.onDragStarted(this);
+						obj.onDragStarted();
 					}
-					obj.onDragged(this);
+					obj.onDragged();
 				}
 			}
 		}
@@ -343,7 +343,7 @@ class Viewport {
 			if (obj.mouseListening) {
 				if (obj.isOverlapping(this.mousePos)) {
 					currentMousedOverObjIds.add(uuid);
-					if (obj.isMouseBlockingOverlap(this)) {
+					if (obj.isMouseBlockingOverlap()) {
 						break;
 					}
 				}
@@ -356,7 +356,7 @@ class Viewport {
 			if (!prevMousedOverObjIds.has(uuid)) {
 				const obj = this.allObjs[uuid];
 				this.registerMouseOverObj(obj);
-				obj.onMouseEntered(this);
+				obj.onMouseEntered();
 			}
 		}
 
@@ -365,7 +365,7 @@ class Viewport {
 			if (!currentMousedOverObjIds.has(uuid)) {
 				const obj = this.allObjs[uuid];
 				this.unregisterMouseOverObj(obj);
-				obj.onMouseExited(this);
+				obj.onMouseExited();
 			}
 		}
 
@@ -396,6 +396,7 @@ class Viewport {
 		const self = this;
 		this.container.addEventListener("wheel", function (e) {
 			self.preOnMouseWheel(e);
+			
 			if (e.ctrlKey) {
 				if (self.minZoomFactor < self.maxZoomFactor) {
 					const prevZoom = self.zoomFactor;
@@ -445,19 +446,19 @@ class Viewport {
 			self.mouseDown = false;
 			for (const uuid of self.mouseOverObjIdsSorted) {
 				const obj = self.allObjs[uuid];
-				obj.onMouseUp(self);
-				if (obj.isMouseBlockingPress(self)) {
+				obj.onMouseUp();
+				if (obj.isMouseBlockingPress()) {
 					break;
 				}
 			}
 
 			for (const uuid of self.heldObjIdsSorted) {
 				const obj = self.allObjs[uuid];
-				obj.onUnpressed(self);
+				obj.onUnpressed();
 				if (self.mouseDragDistance >= self.nonDragThreshold) {
-					obj.onDragEnded(self);
+					obj.onDragEnded();
 				} else {
-					obj.onClicked(self);
+					obj.onClicked();
 				}
 			}
 			self.mouseDragDistance = 0;

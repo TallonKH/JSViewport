@@ -94,9 +94,13 @@ class NPoint {
 	}
 
 	rotate(rads){
-		const prevRads = Math.atan2(this.y, this.x);
+		const prevRads = this.getAngle();
 		const mag = this.length();
 		return new NPoint(Math.cos(rads + prevRads) * mag, Math.sin(rads + prevRads) * mag);
+	}
+
+	getAngle(){
+		return Math.atan2(this.y, this.x);
 	}
 	
 	rotateAxis(rads, axis){

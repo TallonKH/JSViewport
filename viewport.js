@@ -74,6 +74,7 @@ class Viewport {
 		this.makeElements();
 		this.setupScrollLogic();
 		this.setupMouseListeners();
+		this.setupKeyListeners();
 	}
 
 	preOnMouseDown() {
@@ -81,7 +82,7 @@ class Viewport {
 			Object.values(this.preMouseDownListeners).forEach(f => f(this));
 		}
 	}
-	
+
 	preOnMouseUp() {
 		if (this.preMouseUpListeners) {
 			Object.values(this.preMouseUpListeners).forEach(f => f(this));
@@ -190,7 +191,7 @@ class Viewport {
 		this.drawnObjIds.delete(obj.uuid);
 		// removeItem(this.drawnObjIdsSorted, obj.uuid);
 		this.drawnObjIdsSorted = Array.from(this.drawnObjIds);
-		this.drawnObjIdsSorted.sort(this.getDepthSorter());
+		this.drawnObjIdsSorted.sort(this.getReversedDepthSorter());
 	}
 
 	unregisterMouseListeningObj(obj) {
@@ -372,7 +373,21 @@ class Viewport {
 	}
 
 	setupKeyListeners() {
-		// document.
+		const self = this;
+		document.addEventListener("keydown", function (e) {
+			switch (e.which) {
+				case 17:
+					self.ctrlDown = true;
+					
+			}
+		});
+		document.addEventListener("keyup", function (e) {
+			switch (e.which) {
+				case 17:
+					self.ctrlDown = false;
+			}
+
+		});
 		//TODO add recenter button (space?)
 
 	}

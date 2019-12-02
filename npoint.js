@@ -72,6 +72,10 @@ class NPoint {
 		return Math.sqrt(this.lengthSquared());
 	}
 
+	normalized(){
+		return this.divide1(this.length());
+	}
+
 	min() {
 		return Math.min(this.x, this.y);
 	}
@@ -107,13 +111,21 @@ class NPoint {
 		return this.subtractp(axis).rotate(rads).addp(axis);
 	}
 
+	static distSquared(a, b) {
+		return a.subtractp(b).lengthSquared();
+	}
+
+	static dist(a, b) {
+		return a.subtractp(b).length();
+	}
+
 	distToSegmentSquared(v, w) {
-		const l2 = v.subtractp(w).lengthSquared();
+		const l2 = NPoint.distSquared(v, w);
 		if (l2 == 0) {
-			return this.subtractp(v).lengthSquared();
+			return NPoint.distSquared(this, v);
 		}
 		const t = clamp(NPoint.dotProduct(v.subtractp(this), v.subtractp(w)) / l2, 0, 1);
-		return this.subtractp(w.subtractp(v).multiply1(t).addp(v)).lengthSquared();
+		return NPoint.distSquared(this, w.subtractp(v).multiply1(t).addp(v));
 	}
 
 	distToSegment(v, w) {

@@ -385,10 +385,13 @@ class Viewport {
 			switch (e.which) {
 				case 16:
 					self.shiftDown = true;
+					break;
 				case 17:
 					self.ctrlDown = true;
+					break;
 				case 18:
 					self.altDown = true;
+					break;
 
 			}
 		});
@@ -396,10 +399,13 @@ class Viewport {
 			switch (e.which) {
 				case 16:
 					self.shiftDown = false;
+					break;
 				case 17:
 					self.ctrlDown = false;
+					break;
 				case 18:
 					self.altDown = false;
+					break;
 			}
 
 		});

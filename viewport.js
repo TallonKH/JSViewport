@@ -29,7 +29,7 @@ class Viewport {
 		this.mousePos = new NPoint();
 		/** position where mouse was last pressed down */
 		this.mouseDownPos = new NPoint();
-		/** difference between where mouse was pressed down and current position */
+		/** movement of mouse between ticks */
 		this.mouseDelta = new NPoint();
 		/** cumulative distance that mouse has been dragged in the current press */
 		this.mouseDragDistance = 0;
@@ -46,6 +46,7 @@ class Viewport {
 
 		this.allObjs = {};
 
+		this.drawRegisterCounter = 0
 		this.drawnObjIds = new Set();
 		this.mouseListeningObjIds = new Set();
 		this.mouseOverObjIds = new Set();
@@ -54,7 +55,7 @@ class Viewport {
 		/** objects that the mouse is pressed down on and moved sufficiently */
 		this.draggedObjIds = new Set();
 
-		this.drawnObjIdsSorted = []
+		// this.drawnObjIdsSorted = []
 		this.mouseListeningObjIdsSorted = []
 		this.mouseOverObjIdsSorted = []
 		this.heldObjIdsSorted = []
@@ -138,7 +139,9 @@ class Viewport {
 		return function (aid, bid) {
 			const a = allObjs[aid];
 			const b = allObjs[bid];
-			return (b.zOrder - a.zOrder) || (b.drawRegisterTime - a.drawRegisterTime);
+			return (b.zOrder - a.zOrder) ||
+				(b.zSubOrder - a.zSubOrder) ||
+				(b.drawRegisterNum - a.drawRegisterNum);
 		}
 	}
 
@@ -158,10 +161,10 @@ class Viewport {
 	}
 
 	registerDrawnObj(obj) {
-		obj.drawRegisterTime = currentTimeMillis();
+		obj.drawRegisterNum = this.drawRegisterCounter++;
 		this.drawnObjIds.add(obj.uuid);
-		this.drawnObjIdsSorted = Array.from(this.drawnObjIds);
-		this.drawnObjIdsSorted.sort(this.getReversedDepthSorter());
+		// this.drawnObjIdsSorted = Array.from(this.drawnObjIds);
+		// this.drawnObjIdsSorted.sort(this.getReversedDepthSorter());
 	}
 
 	registerMouseListeningObj(obj) {
@@ -194,8 +197,8 @@ class Viewport {
 	unregisterDrawnObj(obj) {
 		this.drawnObjIds.delete(obj.uuid);
 		// removeItem(this.drawnObjIdsSorted, obj.uuid);
-		this.drawnObjIdsSorted = Array.from(this.drawnObjIds);
-		this.drawnObjIdsSorted.sort(this.getReversedDepthSorter());
+		// this.drawnObjIdsSorted = Array.from(this.drawnObjIds);
+		// this.drawnObjIdsSorted.sort(this.getReversedDepthSorter());
 	}
 
 	unregisterMouseListeningObj(obj) {
@@ -231,7 +234,7 @@ class Viewport {
 
 	unregisterAllDrawnObjs() {
 		this.drawnObjIds.clear();
-		this.drawnObjIdsSorted = [];
+		// this.drawnObjIdsSorted = [];
 	}
 
 	unregisterAllMouseListeningObjs() {
@@ -285,11 +288,16 @@ class Viewport {
 	redraw() {
 		this.redrawQueued = false;
 		this.background();
-		for (const uuid of this.drawnObjIdsSorted) {
+		const drawnObjIdsSorted = Array.from(this.drawnObjIds);
+		drawnObjIdsSorted.sort(this.getReversedDepthSorter());
+		for (const uuid of drawnObjIdsSorted) {
 			const obj = this.allObjs[uuid];
 			obj.draw(this.ctx);
 		}
+		this.onRedraw();
 	}
+
+	onRedraw() {}
 
 	drawRect(x, y, w, h) {
 		const pos = this.canvasToViewSpace(new NPoint(x, y));
@@ -299,8 +307,14 @@ class Viewport {
 	makeElements() {
 		this.container = document.createElement("div");
 		this.container.classList.add("vpContainer");
+		this.container.style.width = "100%";
+		this.container.style.height = "100%";
+		this.container.style.background = "transparent";
 
 		this.canvas = document.createElement("canvas");
+		this.canvas.style.width = "100%";
+		this.canvas.style.height = "100%";
+		this.canvas.style.background = "transparent";
 		this.container.appendChild(this.canvas);
 		this.ctx = this.canvas.getContext("2d");
 	}
@@ -376,6 +390,7 @@ class Viewport {
 			}
 		}
 
+		this.queueRedraw();
 		this.postOnMouseMove();
 	}
 
@@ -448,6 +463,7 @@ class Viewport {
 		});
 
 		this.container.addEventListener("mousedown", function (e) {
+			self.queueRedraw();
 			self.mouseDownPos = self.pageToViewSpace(self.mouseElemPos);
 			self.mouseDown = true;
 			self.preOnMouseDown();
@@ -463,6 +479,7 @@ class Viewport {
 		});
 
 		document.addEventListener("mouseup", function (e) {
+			self.queueRedraw();
 			self.preOnMouseUp();
 			self.mouseDown = false;
 			for (const uuid of self.mouseOverObjIdsSorted) {

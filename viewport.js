@@ -72,9 +72,12 @@ class Viewport {
 		this.postMouseMoveListeners = {}
 		this.postMouseWheelListeners = {}
 
+		// is the mouse over the viewport?
+		this.mouseWithin = false;
 		this.ctrlDown = false;
 		this.shiftDown = false;
 		this.altDown = false;
+		this.downKeys = new Set();
 
 		this.makeElements();
 		this.setupScrollLogic();
@@ -394,6 +397,12 @@ class Viewport {
 		this.postOnMouseMove();
 	}
 
+	keyPressed(code) {
+	}
+
+	keyReleased(code) {
+	}
+
 	setupKeyListeners() {
 		const self = this;
 		document.addEventListener("keydown", function (e) {
@@ -407,9 +416,15 @@ class Viewport {
 				case 18:
 					self.altDown = true;
 					break;
-
+				default:
+					if(self.mouseWithin){
+						self.downKeys.add(e.which);
+						self.keyPressed(e.which);
+					}
 			}
 		});
+
+		// global key up
 		document.addEventListener("keyup", function (e) {
 			switch (e.which) {
 				case 16:
@@ -421,6 +436,10 @@ class Viewport {
 				case 18:
 					self.altDown = false;
 					break;
+				default:
+					if (self.downKeys.delete(e.which)) {
+						self.keyReleased(e.which);
+					}
 			}
 
 		});
@@ -430,6 +449,14 @@ class Viewport {
 
 	setupMouseListeners() {
 		const self = this;
+		this.container.addEventListener("mouseenter", function(e){
+			self.mouseWithin = true;
+		});
+
+		this.container.addEventListener("mouseleave", function(e){
+			self.mouseWithin = false;
+		});
+
 		this.container.addEventListener("wheel", function (e) {
 			self.preOnMouseWheel(e);
 

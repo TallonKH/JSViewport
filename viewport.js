@@ -265,6 +265,7 @@ class Viewport {
 
 	forget(obj) {
 		obj.onForget();
+		delete this.allObjs[obj.id];
 		this.unregisterDrawnObj(obj);
 		this.unregisterMouseListeningObj(obj);
 		this.unregisterMouseOverObj(obj);
@@ -273,6 +274,12 @@ class Viewport {
 		this.queueRedraw();
 		// update mouse logic in case an object is removed that was preventing a lower object from being touched
 		this.mousePosUpdated();
+	}
+
+	forgetAll() {
+		for (const obj of Object.values(this.allObjs)) {
+			this.forget(obj);
+		}
 	}
 
 	background() {
@@ -397,11 +404,9 @@ class Viewport {
 		this.postOnMouseMove();
 	}
 
-	keyPressed(code) {
-	}
+	keyPressed(code) {}
 
-	keyReleased(code) {
-	}
+	keyReleased(code) {}
 
 	setupKeyListeners() {
 		const self = this;
@@ -417,7 +422,7 @@ class Viewport {
 					self.altDown = true;
 					break;
 				default:
-					if(self.mouseWithin){
+					if (self.mouseWithin) {
 						self.downKeys.add(e.which);
 						self.keyPressed(e.which);
 					}
@@ -449,11 +454,11 @@ class Viewport {
 
 	setupMouseListeners() {
 		const self = this;
-		this.container.addEventListener("mouseenter", function(e){
+		this.container.addEventListener("mouseenter", function (e) {
 			self.mouseWithin = true;
 		});
 
-		this.container.addEventListener("mouseleave", function(e){
+		this.container.addEventListener("mouseleave", function (e) {
 			self.mouseWithin = false;
 		});
 

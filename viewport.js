@@ -380,14 +380,16 @@ class Viewport {
 				}
 			}
 		}
-
+	
 		const prevMousedOverObjIds = new Set(this.mouseOverObjIds);
 		// existing & new moused over objs
-		for (const uuid of currentMousedOverObjIds) {
-			if (!prevMousedOverObjIds.has(uuid)) {
-				const obj = this.allObjs[uuid];
-				this.registerMouseOverObj(obj);
-				obj.onMouseEntered();
+		if (this.mouseWithin){
+			for (const uuid of currentMousedOverObjIds) {
+				if (!prevMousedOverObjIds.has(uuid)) {
+					const obj = this.allObjs[uuid];
+					this.registerMouseOverObj(obj);
+					obj.onMouseEntered();
+				}
 			}
 		}
 

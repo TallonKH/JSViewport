@@ -44,10 +44,6 @@ class GrabObj extends VPObject {
         this.zSubOrder = 0;
     }
 
-    onMouseUp() {
-        super.onMouseUp();
-    }
-
     onMouseEntered() {
         super.onMouseEntered();
         this.suggestCursor("pointer");

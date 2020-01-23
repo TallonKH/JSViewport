@@ -13,8 +13,8 @@ class VPObject {
         this.drawable = drawable;
         this.mouseListening = mouseListening;
         this.zOrder = zOrder;
-        
         this.zSubOrder = 0;
+        
         this.mouseOverlapping = false;
         this.held = false;
         this.grabbed = false;

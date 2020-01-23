@@ -11,6 +11,8 @@ class Viewport {
 		this.redrawQueued
 		this.background = new backgroundClass(this);
 
+		this.targetTickrate = 30;
+
 		this.zoomCenter = zoomCenter;
 		this.minZoomFactor = minZoomFactor;
 		this.maxZoomFactor = maxZoomFactor;
@@ -25,7 +27,7 @@ class Viewport {
 		this.panSensitivity = panSensitivity;
 
 		this.mouseDown = false;
-		
+
 		/** raw mouse position (relative to viewport element) */
 		this.mouseElemPos = new NPoint();
 		this.mouseElemDownPos = new NPoint();
@@ -102,41 +104,49 @@ class Viewport {
 			Object.values(this.preMouseUpListeners).forEach(f => f(this));
 		}
 	}
+
 	preOnMouseClick() {
 		if (this.preMouseClickListeners) {
 			Object.values(this.preMouseClickListeners).forEach(f => f(this));
 		}
 	}
+
 	preOnMouseMove() {
 		if (this.preMouseMoveListeners) {
 			Object.values(this.preMouseMoveListeners).forEach(f => f(this));
 		}
 	}
+
 	preOnMouseWheel(e) {
 		if (this.preMouseWheelListeners) {
 			Object.values(this.preMouseWheelListeners).forEach(f => f(this, e));
 		}
 	}
+
 	postOnMouseDown() {
 		if (this.postMouseDownListeners) {
 			Object.values(this.postMouseDownListeners).forEach(f => f(this));
 		}
 	}
+
 	postOnMouseUp() {
 		if (this.postMouseUpListeners) {
 			Object.values(this.postMouseUpListeners).forEach(f => f(this));
 		}
 	}
+
 	postOnMouseClick() {
 		if (this.postMouseClickListeners) {
 			Object.values(this.postMouseClickListeners).forEach(f => f(this));
 		}
 	}
+
 	postOnMouseMove() {
 		if (this.postMouseMoveListeners) {
 			Object.values(this.postMouseMoveListeners).forEach(f => f(this));
 		}
 	}
+
 	postOnMouseWheel(e) {
 		if (this.postMouseWheelListeners) {
 			Object.values(this.postMouseWheelListeners).forEach(f => f(this, e));
@@ -288,6 +298,51 @@ class Viewport {
 		}
 	}
 
+	// tickMultiplier = integer equiv of deltaTime
+	// overflow = accidental ms delay since last tick
+	onTick(deltaT, tickMultiplier, overflow) {
+		// console.log(ticks + " : " + deltaTime + " : " + overflow);
+	}
+
+	setupLoop() {
+		const self = this;
+		let currentTime = Date.now();
+		let lastTime = currentTime;
+		let deltaTime = 0;
+		let overflowTime = 0;
+
+		function requestNext() {
+			window.requestAnimationFrame(loopIteration);
+		};
+
+		function loopIteration() {
+			const targetDelay = 1000 / self.targetTickrate;
+			currentTime = Date.now();
+			deltaTime += currentTime - lastTime;
+			if (deltaTime > targetDelay) {
+				let diffRemainder = deltaTime % targetDelay;
+				let diffQuotient = Math.floor(deltaTime / targetDelay);
+
+				overflowTime += diffRemainder;
+
+				let overflowRemainder = overflowTime % targetDelay;
+				let overflowQuotient = Math.floor(overflowTime / targetDelay);
+
+				overflowTime = overflowRemainder;
+
+				let extraTicks = diffQuotient + overflowQuotient;
+				self.onTick(deltaTime * extraTicks / 1000 + 1, extraTicks, overflowTime);
+				requestNext();
+				deltaTime = 0;
+			} else {
+				setTimeout(requestNext, targetDelay - deltaTime);
+			}
+			lastTime = currentTime;
+		}
+
+		loopIteration();
+	}
+
 	queueRedraw() {
 		if (!this.redrawQueued) {
 			this.redrawQueued = true;
@@ -379,10 +434,10 @@ class Viewport {
 				}
 			}
 		}
-	
+
 		const prevMousedOverObjIds = new Set(this.mouseOverObjIds);
 		// existing & new moused over objs
-		if (this.mouseWithin){
+		if (this.mouseWithin) {
 			for (const uuid of currentMousedOverObjIds) {
 				if (!prevMousedOverObjIds.has(uuid)) {
 					const obj = this.allObjs[uuid];
@@ -455,11 +510,11 @@ class Viewport {
 
 	setupMouseListeners() {
 		const self = this;
-		this.container.addEventListener("mouseenter", function (e) {
+		this.container.addEventListener("pointerenter", function (e) {
 			self.mouseWithin = true;
 		});
 
-		this.container.addEventListener("mouseleave", function (e) {
+		this.container.addEventListener("pointerleave", function (e) {
 			self.mouseWithin = false;
 		});
 
@@ -495,7 +550,7 @@ class Viewport {
 			self.postOnMouseWheel(e);
 		});
 
-		this.container.addEventListener("mousedown", function (e) {
+		this.container.addEventListener("pointerdown", function (e) {
 			self.queueRedraw();
 			self.mouseElemDownPos = self.mouseElemPos;
 			self.mouseDownPos = self.pageToViewSpace(self.mouseElemPos);
@@ -512,7 +567,7 @@ class Viewport {
 			self.postOnMouseDown();
 		});
 
-		document.addEventListener("mouseup", function (e) {
+		document.addEventListener("pointerup", function (e) {
 			self.queueRedraw();
 			self.preOnMouseUp();
 			self.mouseDown = false;
@@ -539,13 +594,14 @@ class Viewport {
 			self.unregisterAllDraggedObjs();
 			self.postOnMouseUp();
 		});
-
-		document.addEventListener("mousemove", function (e) {
+		
+		// this.container.style.touchAction = "none";
+		document.addEventListener("pointermove", function (e) {
 			const newMouseElemPos = new NPoint(
 				e.pageX - self.container.offsetLeft,
 				e.pageY - self.container.offsetTop
 			);
-			
+
 			self.mouseElemDelta = newMouseElemPos.subtractp(self.mouseElemPos);
 			self.mouseElemPos = newMouseElemPos;
 			self.mousePosUpdated();

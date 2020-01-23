@@ -24,6 +24,7 @@ class Viewport {
 
 		this.pannable = pannable;
 		this.panCenter = new NPoint();
+		this.vpCenter = new NPoint();
 		this.panSensitivity = panSensitivity;
 
 		this.mouseDown = false;
@@ -91,6 +92,16 @@ class Viewport {
 		this.setupMouseListeners();
 		this.setupKeyListeners();
 		this.registerObj(this.background);
+		const self = this;
+		// setTimeout(function () {
+		// 	self.recenter();
+		// }, 500);
+	}
+
+	recenter() {
+		console.log("Asdf");
+		this.panCenter = new NPoint(this.canvas.width / 2, this.canvas.height / 2);
+		this.queueRedraw();
 	}
 
 	preOnMouseDown() {
@@ -254,11 +265,13 @@ class Viewport {
 	unregisterAllDrawnObjs() {
 		this.drawnObjIds.clear();
 		// this.drawnObjIdsSorted = [];
+		this.registerDrawnObj(this.background);
 	}
 
 	unregisterAllMouseListeningObjs() {
 		this.mouseListeningObjIds.clear();
 		this.mouseListeningObjIdsSorted = [];
+		this.registerMouseListeningObj(this.background);
 	}
 
 	unregisterAllMouseOverObjs() {
@@ -280,6 +293,10 @@ class Viewport {
 	}
 
 	forget(obj) {
+		if (obj == this.background) {
+			return false;
+		}
+
 		obj.onForget();
 		delete this.allObjs[obj.id];
 		this.unregisterDrawnObj(obj);
@@ -354,6 +371,7 @@ class Viewport {
 		this.redrawQueued = false;
 		const drawnObjIdsSorted = Array.from(this.drawnObjIds);
 		drawnObjIdsSorted.sort(this.getReversedDepthSorter());
+		this.ctx.setTransform(this.zoomFactor, 0, 0, -this.zoomFactor, this.panCenter.x + this.vpCenter.x, this.panCenter.y + this.vpCenter.y);
 		for (const uuid of drawnObjIdsSorted) {
 			const obj = this.allObjs[uuid];
 			obj.draw(this.ctx);
@@ -363,10 +381,10 @@ class Viewport {
 
 	onRedraw() {}
 
-	drawRect(x, y, w, h) {
-		const pos = this.canvasToViewSpace(new NPoint(x, y));
-		this.ctx.fillRect(pos.x, pos.y, w * this.zoomFactor, h * this.zoomFactor);
-	}
+	// drawRect(x, y, w, h) {
+	// 	const pos = this.canvasToViewSpace(new NPoint(x, y));
+	// 	this.ctx.fillRect(pos.x, pos.y, w * this.zoomFactor, h * this.zoomFactor);
+	// }
 
 	makeElements() {
 		this.container = document.createElement("div");
@@ -384,12 +402,12 @@ class Viewport {
 	}
 
 	pageToViewSpace(npoint) {
-		// return npoint.subtract2(this.container.offsetLeft, this.container.offsetTop).divide1(this.zoomFactor).subtractp(this.panCenter)
-		return npoint.subtractp(this.panCenter).divide1(this.zoomFactor).subtract2(this.canvas.width / 2, this.canvas.height / 2).multiply2(1, -1);
+		return npoint.subtractp(this.panCenter.addp(this.vpCenter)).divide1(this.zoomFactor).multiply2(1, -1); //.subtract2(this.canvas.width / 2, this.canvas.height / 2);
+		// return npoint.subtractp(this.panCenter).divide1(this.zoomFactor).subtract2(this.canvas.width / 2, this.canvas.height / 2).multiply2(1, -1);
 	}
 
 	canvasToViewSpace(npoint) {
-		return npoint.multiply2(1, -1).add2(this.canvas.width / 2, this.canvas.height / 2).multiply1(this.zoomFactor).addp(this.panCenter);
+		return npoint.multiply2(1, -1).add2(this.canvas.width / 2, this.canvas.height / 2).multiply1(this.zoomFactor).addp(this.panCenter.addp(this.vpCenter));
 	}
 
 	setupScrollLogic() {
@@ -398,6 +416,7 @@ class Viewport {
 			self.canvas.width = e.width;
 			self.canvas.height = e.height;
 			self.canvasDims = new NPoint(self.canvas.width, self.canvas.height);
+			self.vpCenter = self.canvasDims.divide1(2);
 			self.queueRedraw();
 		});
 	}
@@ -530,10 +549,10 @@ class Viewport {
 					const zoomDelta = self.zoomFactor - prevZoom;
 					switch (self.zoomCenter) {
 						case "center":
-							self.panCenter = self.panCenter.subtractp(self.canvasDims.divide1(2).subtractp(self.panCenter).divide1(prevZoom).multiply1(self.zoomFactor - prevZoom));
+							self.panCenter = self.panCenter.subtractp(self.vpCenter.subtractp(self.panCenter).divide1(prevZoom).multiply1(self.zoomFactor - prevZoom));
 							break;
 						case "mouse":
-							self.panCenter = self.panCenter.subtractp(self.mouseElemPos.subtractp(self.panCenter).divide1(prevZoom).multiply1(self.zoomFactor - prevZoom));
+							self.panCenter = self.panCenter.subtractp(self.mouseElemPos.subtractp(self.panCenter.addp(self.vpCenter)).divide1(prevZoom).multiply1(self.zoomFactor - prevZoom));
 							break;
 					}
 					self.queueRedraw();
@@ -594,7 +613,7 @@ class Viewport {
 			self.unregisterAllDraggedObjs();
 			self.postOnMouseUp();
 		});
-		
+
 		// this.container.style.touchAction = "none";
 		document.addEventListener("pointermove", function (e) {
 			const newMouseElemPos = new NPoint(

@@ -13,7 +13,7 @@ function setupElements() {
 function main() {
     viewport = new CustomViewport();
     rootDiv.appendChild(viewport.container);
-    // viewport.backgroundColor = "#1a1a1a";
+    viewport.background.color = "#1a1a1a";
     // viewport.minZoomFactor = 0.25;
     // viewport.maxZoomFactor = 2;
     // viewport.pannable = true;
@@ -45,6 +45,6 @@ class CustomViewport extends Viewport {
 
     onRedraw () {
         super.onRedraw();
-        console.log("asdf");
+        // console.log("asdf");
     }
 }

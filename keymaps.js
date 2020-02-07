@@ -3,6 +3,8 @@ isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
 
 class KeybindHandler {
     constructor() {
+        this.macAdjust = true;
+
         this.contextStack = [];
         this.allContextGroups = {};
 
@@ -12,6 +14,7 @@ class KeybindHandler {
         this.altDown = false;
         this.ctrlDown = false;
         this.metaDown = false;
+
     }
 
     setupListeners() {
@@ -40,7 +43,11 @@ class KeybindHandler {
                         break;
                     case "MetaLeft":
                     case "MetaRight":
-                        self.metaDown = keyState;
+                        if (self.macAdjust && isMac) {
+                            self.ctrlDown = keyState;
+                        }else{
+                            self.metaDown = keyState;
+                        }
                         break;
                 }
 
@@ -228,6 +235,9 @@ class ContextMatcher {
     }
 
     static import(str) {
+        if(str == "(global)"){
+            return new ContextMatcher("global", []);
+        }
         const i = str.indexOf("[");
         const terms = str.substring(i + 1, str.length - 2).split(",");
         return new ContextMatcher(str.substring(1, i), terms);
@@ -351,7 +361,7 @@ class ContextGroup {
     /** DOES NOT DEAL COLLISION HANDLING - that is up to the implementer */
     merge(other) {
         for (const keyCode in other.upBinds) {
-            for (const bind of other.upBinds[keyCode]){
+            for (const bind of other.upBinds[keyCode]) {
                 this.addKeybind(bind);
             }
         }
@@ -416,17 +426,24 @@ function example2() {
 
     // add a keybind
     handler.addBindingQuick(
-        "(suffix[viewport])", 
-        "(ctrl+KeyS)", 
-        "s suff", 
+        "(global)",
+        "(ctrl+KeyO)",
+        "o",
+        _ => console.log("O")
+    );
+
+    handler.addBindingQuick(
+        "(suffix[viewport])",
+        "(ctrl+KeyS)",
+        "s suff",
         _ => console.log("S suff")
     );
 
     // add a keybind
     handler.addBindingQuick(
-        "(prefix[viewport])", 
-        "(ctrl+KeyS)", 
-        "s pre", 
+        "(prefix[viewport])",
+        "(ctrl+KeyS)",
+        "s pre",
         _ => console.log("S pre")
     );
 

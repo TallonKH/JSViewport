@@ -1,41 +1,134 @@
 // does not require other Viewport components to function
-class KeyMapHandler {
+isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+
+class KeybindHandler {
     constructor() {
         this.contextStack = [];
-        this.allMapGroups = [];
+        this.allContextGroups = {};
 
-        this.activeMappings = [];
+        this.activeContextGroups = [];
+
+        this.shiftDown = false;
+        this.altDown = false;
+        this.ctrlDown = false;
+        this.metaDown = false;
     }
 
-    setupListeners(){
-        //TODO figure out good system for telling the handler what the current active context is
-        // (pass supercontexts, and append top layer context?)
+    setupListeners() {
+        if (this.listenersActive) {
+            return false;
+        }
+        this.listenersActive = true;
+        // Object.freeze(this.listenersActive);
+
+        const self = this;
+
+        const keyHandlerGenerator = function (keyState) {
+            return function (e) {
+                switch (e.code) {
+                    case "ShiftLeft":
+                    case "ShiftRight":
+                        self.shiftDown = keyState;
+                        break;
+                    case "AltLeft":
+                    case "AltRight":
+                        self.altDown = keyState;
+                        break;
+                    case "ControlLeft":
+                    case "ControlRight":
+                        self.ctrlDown = keyState;
+                        break;
+                    case "MetaLeft":
+                    case "MetaRight":
+                        self.metaDown = keyState;
+                        break;
+                }
+
+                outerloop:
+                    for (const group of self.activeContextGroups) {
+                        const binds = (keyState ? group.downBinds : group.upBinds)[e.code] || [];
+                        for (const keybind of binds) {
+                            if (keybind.keyCombo.matchesModifiers(self.shiftDown, self.altDown, self.ctrlDown, self.metaDown)) {
+                                keybind.action.perform();
+                                e.preventDefault();
+                                e.stopPropagation();
+                                break outerloop;
+                            }
+                        }
+                    }
+            }
+        }
+
+        document.addEventListener("keydown", keyHandlerGenerator(true));
+        document.addEventListener("keyup", keyHandlerGenerator(false));
+        return true;
     }
 
-    recalc() {
+    recalcActiveGroups() {
         const groupsFiltered = [];
-        for (const group of this.allMapGroups) {
+        for (const groupCode in this.allContextGroups) {
+            const group = this.allContextGroups[groupCode];
             if (group.matches(this.contextStack)) {
                 groupsFiltered.push(group);
             }
         }
+
         groupsFiltered.sort((a, b) => {
             const ap = a.contextMatcher.priority;
             const bp = b.contextMatcher.priority;
             return (bp[0] - ap[0]) || (bp[1] - ap[1]);
         });
 
-        this.activeMappings = [];
+        this.activeContextGroups = [];
         const self = this;
 
         groupsFiltered.forEach(group => {
-            group.keyMappings.forEach(mapping => {
-                self.activeMappings.push(mapping);
-            });
+            self.activeContextGroups.push(group);
         });
+    }
+
+    addContextGroup(group) {
+        const ctxString = group.contextMatcher.ctxString;
+        const existing = this.allContextGroups[ctxString];
+        if (existing) {
+            existing.merge(group);
+            // don't need to recalc if merging
+        } else {
+            this.allContextGroups[ctxString] = group;
+            this.recalcActiveGroups();
+        }
+    }
+
+    addBindingQuick(ctxStr, keyStr, name, action) {
+        const group = new ContextGroup(ContextMatcher.import(ctxStr));
+        group.addKeybind(
+            new Keybind(KeyCombo.import(keyStr), new KeyAction(name, action))
+        );
+        this.addContextGroup(group);
+    }
+
+    findCollisions(candidateKeybind) {
+        // use a set because the same keybind can appear in multiple context groups
+        const colliding = new Set();
+        this.allContextGroups.forEach(function (_, group) {
+            group.findCollisions[candidateKeybind].forEach(x => colliding.add(x));
+        });
+
+        return colliding;
+    }
+
+    popContext() {
+        return this.contextStack.pop();
+        this.recalcActiveGroups();
+    }
+
+    pushContext(ctx) {
+        this.contextStack.push(ctx);
+        this.recalcActiveGroups();
     }
 }
 
+/** Immutable */
 class ContextMatcher {
     static contextModes = Object.freeze({
         "equals": {
@@ -129,7 +222,15 @@ class ContextMatcher {
         this.mode = mode;
         this.terms = terms;
         this.priority = [ContextMatcher.contextModes[mode], terms.length];
+        this.ctxString = `(${this.mode}[${this.terms}])`;
         this.comparison = active => ContextMatcher.contextModes[mode].comparison(active, terms);
+        Object.freeze(this);
+    }
+
+    static import(str) {
+        const i = str.indexOf("[");
+        const terms = str.substring(i + 1, str.length - 2).split(",");
+        return new ContextMatcher(str.substring(1, i), terms);
     }
 
     getDescription() {
@@ -137,57 +238,202 @@ class ContextMatcher {
     }
 }
 
-//TODO do this
+/** (Immutable) */
 class KeyCombo {
-    constructor() {
-        this.key;
-        this.needsAlt;
-        this.needsCtrl;
-        this.needsMacCtrl;
-        this.needsFunction;
+    // direction: true=press, false=release
+    constructor(keyCode, direction, {
+        shift = false,
+        alt = false,
+        ctrl = false,
+        meta = false
+    } = {}) {
+        this.keyCode = keyCode;
+        this.direction = direction;
+        this.needsShift = shift;
+        this.needsAlt = alt;
+        this.needsCtrl = ctrl;
+        this.needsMeta = meta;
+        Object.freeze(this);
+    }
+
+    collides(other) {
+        return this.keyCode == other.keyCode && this.direction == other.direction &&
+            (
+                this.needsShift == other.needsShift &&
+                this.needsAlt == other.needsAlt &&
+                this.needsCtrl == other.needsCtrl &&
+                this.needsMeta == other.needsMeta
+            );
+    }
+
+    matchesModifiers(shiftDown, altDown, ctrlDown, metaDown) {
+        return (
+            this.needsShift == shiftDown &&
+            this.needsAlt == altDown &&
+            this.needsMeta == metaDown &&
+            this.needsCtrl == ctrlDown
+        );
+    }
+
+    export () {
+        let str = "";
+        if (this.needMeta) {
+            str += "meta+";
+        }
+        if (this.needCtrl) {
+            str += "ctrl+";
+        }
+        if (this.needAlt) {
+            str += "alt+";
+        }
+        if (this.needShift) {
+            str += "shift+";
+        }
+
+        str += this.keyCode + "." + (direction ? "down" : "up");
+
+        return "(" + str + ")";
+    }
+
+    static import(str) {
+        str = str.substring(1, str.length - 1);
+        const terms = str.split("+");
+
+        let [key, dir] = terms.pop().split(".");
+        dir = !(dir == "up");
+        return new KeyCombo(key, dir, {
+            shift: terms.includes("shift"),
+            alt: terms.includes("alt"),
+            ctrl: terms.includes("ctrl"),
+            meta: terms.includes("meta")
+        });
     }
 }
 
 class ContextGroup {
-    constructor(contextMatcher, keyMappings) {
+    constructor(contextMatcher) {
         this.contextMatcher = contextMatcher;
-        this.keyMappings = keyMappings;
+        // Object.freeze(this.contextMatcher);
+
+        this.upBinds = {};
+        this.downBinds = {};
+    }
+
+    findCollisions(candidateKeybind) {
+        const binds = candidateKeybind.keyCombo.direction ? this.downBinds : this.upBinds;
+
+        const collisions = [];
+        binds.forEach(function (_, existingKeybind) {
+            if (existingKeybind.collides[candidateKeybind]) {
+                collisions.push(existingKeybind);
+            }
+        });
+
+        return collisions;
     }
 
     matches(active) {
         return this.contextMatcher.comparison(active);
     }
-}
 
-class KeyMapping {
-    constructor(keys, action) {
-        this.keys = keys;
-        this.contextMatcher = contextMatcher;
-        this.action = action;
-        this.id = idCounter++;
+
+    addKeybind(keybind) {
+        const binds = keybind.keyCombo.direction ? this.downBinds : this.upBinds;
+        const keyCode = keybind.keyCombo.keyCode;
+        const existing = binds[keyCode];
+        if (existing) {
+            existing.push(keybind);
+        } else {
+            binds[keyCode] = [keybind];
+        }
+    }
+
+    /** DOES NOT DEAL COLLISION HANDLING - that is up to the implementer */
+    merge(other) {
+        for (const keyCode in other.upBinds) {
+            for (const bind of other.upBinds[keyCode]){
+                this.addKeybind(bind);
+            }
+        }
+        for (const keyCode in other.downBinds) {
+            for (const bind of other.downBinds[keyCode]) {
+                this.addKeybind(bind);
+            }
+        }
     }
 }
 
-function loneKeyMap(contextMatcher, keys, action) {
-    return new ContextGroup(contextMatcher, [new KeyMapping(keys, action)]);
+/** (Immutable) */
+class Keybind {
+    constructor(keyCombo, action) {
+        this.keyCombo = keyCombo;
+        this.action = action;
+        Object.freeze(this);
+    }
+}
+
+/** (Immutable) */
+class KeyAction {
+    constructor(name, func) {
+        this.name = name;
+        this.perform = func;
+        Object.freeze(this);
+    }
 }
 
 function example() {
-    const handler = new KeyMapHandler();
-    handler.contextStack = ["aaa", "bbb", "ccc", "ddd"];
+    // set up the main handler
+    const handler = new KeybindHandler();
+    handler.setupListeners();
 
-    handler.allMapGroups.push(new ContextGroup(
-        new ContextMatcher("suffix", ["ccc", "ddd"]),
-        ["a", "b"]
-    ));
+    // create a context group
+    const ctx = new ContextMatcher("suffix", ["viewport"]);
+    const globl = new ContextGroup(ctx);
+    handler.addContextGroup(globl);
 
-    handler.allMapGroups.push(new ContextGroup(
-        new ContextMatcher("equals", ["aaa", "bbb", "ccc", "ddd"]),
-        ["c", "d"]
-    ));
+    // add a keybind
+    const skey = new Keybind(
+        new KeyCombo("KeyS", true, {
+            ctrl: true
+        }),
+        new KeyAction(
+            "test",
+            _ => console.log("S")
+        )
+    );
+    globl.addKeybind(skey);
 
-    handler.recalc();
-    console.log(handler.activeMappings);
+    // change the context
+    handler.pushContext("viewport");
+
+    console.log(handler.activeContextGroups);
 }
 
-example();
+function example2() {
+    // set up the main handler
+    const handler = new KeybindHandler();
+    handler.setupListeners();
+
+    // add a keybind
+    handler.addBindingQuick(
+        "(suffix[viewport])", 
+        "(ctrl+KeyS)", 
+        "s suff", 
+        _ => console.log("S suff")
+    );
+
+    // add a keybind
+    handler.addBindingQuick(
+        "(prefix[viewport])", 
+        "(ctrl+KeyS)", 
+        "s pre", 
+        _ => console.log("S pre")
+    );
+
+    // change the context
+    handler.pushContext("viewport");
+
+    console.log(handler.activeContextGroups);
+}
+
+example2();

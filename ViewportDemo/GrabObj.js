@@ -11,7 +11,7 @@ class GrabObj extends VPObject {
     draw(ctx) {
         ctx.fillStyle = this.color;
         if (this.held || (this.mouseOverlapping && !this.vp.mouseDown)) {
-            ctx.lineWidth = 6 * this.vp.zoomFactor;
+            ctx.lineWidth = 6;
             ctx.strokeStyle = "#ec5";
             this.strokeCircle(ctx);
         }

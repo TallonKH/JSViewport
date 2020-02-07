@@ -22,9 +22,9 @@ function main() {
     // viewport.zoomCenter = "mouse";
     
     const grabbables = [];
-    for (let i = -3; i < 3; i++) {
-        const grabbable = new GrabObj(viewport, new NPoint(i*Math.abs(i)*25, 0));
-        grabbable.color = colorLerp("#ff4747", "#4769ff", (i+3)/6);
+    for (let i = -15; i < 15; i++) {
+        const grabbable = new GrabObj(viewport, new NPoint(i*25*Math.cos(Math.abs(i) / 25), 0*Math.sin(i/10)));
+        grabbable.color = colorLerp("#ff4747", "#4769ff", (i+15)/30);
         viewport.registerObj(grabbable);
     }
 }

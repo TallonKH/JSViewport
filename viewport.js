@@ -486,7 +486,8 @@ class Viewport {
 	setupKeyListeners() {
 		const self = this;
 		document.addEventListener("keydown", function (e) {
-			switch (e.which) {
+			const keyCode = e.key;
+			switch (keyCode) {
 				case 16:
 					self.shiftDown = true;
 					break;
@@ -498,15 +499,16 @@ class Viewport {
 					break;
 				default:
 					if (self.mouseWithin) {
-						self.downKeys.add(e.which);
-						self.keyPressed(e.which);
+						self.downKeys.add(keyCode);
+						self.keyPressed(keyCode);
 					}
 			}
 		});
 
 		// global key up
 		document.addEventListener("keyup", function (e) {
-			switch (e.which) {
+			const keyCode = e.key;
+			switch (keyCode) {
 				case 16:
 					self.shiftDown = false;
 					break;
@@ -517,8 +519,8 @@ class Viewport {
 					self.altDown = false;
 					break;
 				default:
-					if (self.downKeys.delete(e.which)) {
-						self.keyReleased(e.which);
+					if (self.downKeys.delete(keyCode)) {
+						self.keyReleased(keyCode);
 					}
 			}
 
@@ -543,7 +545,7 @@ class Viewport {
 			if (e.ctrlKey) {
 				if (self.minZoomFactor < self.maxZoomFactor) {
 					const prevZoom = self.zoomFactor;
-					self.zoomCounter += event.deltaY;
+					self.zoomCounter += e.deltaY;
 					self.zoomCounter = Math.min(self.maxZoomCounter, Math.max(self.minZoomCounter, self.zoomCounter));
 					self.zoomFactor = Math.pow(1.0075, -self.zoomCounter);
 					const zoomDelta = self.zoomFactor - prevZoom;
